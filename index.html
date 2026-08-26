@@ -1,71 +1,495 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex, nofollow">
-<title>ATAC Judging</title>
+<base target="_top">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    background:#F6F5F1;color:#16182B;
-    font:400 16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  .box{max-width:420px;padding:28px 24px;text-align:center}
-  h1{font-size:20px;font-weight:500;margin:0 0 8px}
-  p{color:#4A4C5E;font-size:14px;margin:0 0 16px}
-  a.btn{display:inline-block;padding:12px 20px;background:#16182B;color:#fff;
-    text-decoration:none;border-radius:7px;font-weight:500}
-  code{display:block;margin-top:14px;padding:9px 11px;background:#fff;border:1px solid #DFDDD5;
-    border-radius:6px;font-size:11px;word-break:break-all;color:#16182B}
-  .err{color:#A3302B}
+  :root{
+    --ink:#16182B; --ink-soft:#4A4C5E; --mute:#7B7C88;
+    --paper:#F6F5F1; --card:#FFFFFF; --rule:#DFDDD5;
+    --mark:#1D6F5C; --mark-bg:#E6F0EC;
+    --hold:#9A6410; --hold-bg:#FAF0DC;
+    --off:#6B6A64; --off-bg:#ECEBE6;
+    --bad:#A3302B;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:400 16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-text-size-adjust:100%}
+  .wrap{max-width:640px;margin:0 auto;padding:20px 16px 120px}
+  h1{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:30px;line-height:1.15;margin:0 0 4px}
+  h2{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:21px;margin:28px 0 2px}
+  .meta{color:var(--mute);font-size:14px;margin:0 0 20px}
+  .eyebrow{font-size:12px;letter-spacing:.10em;text-transform:uppercase;color:var(--mute);margin:0 0 6px}
+  .card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:16px;margin:0 0 12px}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:14px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+  .row:last-child{border-bottom:none}
+  .row .t{font-weight:500}
+  .row .s{font-size:13px;color:var(--mute)}
+  .pill{font-size:12px;padding:3px 9px;border-radius:99px;white-space:nowrap}
+  .pill.none{background:var(--off-bg);color:var(--off)}
+  .pill.draft{background:var(--hold-bg);color:var(--hold)}
+  .pill.submitted{background:var(--mark-bg);color:var(--mark)}
+  .nom{padding:16px 0;border-bottom:1px solid var(--rule)}
+  .nom:last-child{border-bottom:none}
+  .nom .who{font-weight:500;margin:0 0 10px;word-break:break-word}
+  .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .scale button{appearance:none;border:1px solid var(--rule);background:var(--card);
+    color:var(--ink-soft);border-radius:7px;padding:13px 0;font-size:16px;font-weight:500;
+    cursor:pointer;min-height:46px;font-variant-numeric:tabular-nums}
+  .scale button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .scale button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .alt{display:flex;gap:6px;margin-top:6px}
+  .alt button{flex:1;appearance:none;border:1px solid var(--rule);background:var(--card);
+    color:var(--ink-soft);border-radius:7px;padding:11px 6px;font-size:13px;cursor:pointer;min-height:42px}
+  .alt button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  .alt button.nj[aria-pressed="true"]{background:var(--hold-bg);border-color:var(--hold);color:var(--hold)}
+  .alt button.rc[aria-pressed="true"]{background:var(--off-bg);border-color:var(--off);color:var(--ink)}
+  input[type=text],input[type=date],textarea{width:100%;padding:11px;border:1px solid var(--rule);
+    border-radius:7px;font:inherit;font-size:16px;background:var(--card);color:var(--ink)}
+  textarea{min-height:60px;resize:vertical}
+  label{display:block;font-size:13px;color:var(--ink-soft);margin:0 0 5px}
+  .reason{margin-top:8px}
+  .bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);
+    border-top:1px solid var(--rule);padding:11px 16px;display:flex;gap:8px;align-items:center}
+  .bar .count{flex:1;font-size:13px;color:var(--mute)}
+  .btn{appearance:none;border:1px solid var(--ink);background:var(--ink);color:#fff;
+    border-radius:7px;padding:12px 18px;font:inherit;font-weight:500;cursor:pointer;min-height:46px}
+  .btn.ghost{background:transparent;color:var(--ink)}
+  .btn[disabled]{opacity:.45;cursor:default}
+  .note{font-size:13px;color:var(--mute);margin:8px 0 0}
+  .err{background:#FBEDEC;border:1px solid #E4C3C1;color:var(--bad);
+    border-radius:8px;padding:12px;margin:0 0 14px;font-size:14px}
+  .err ul{margin:6px 0 0;padding-left:18px}
+  .ok{background:var(--mark-bg);border:1px solid #BBD8CE;color:var(--mark);
+    border-radius:8px;padding:12px;margin:0 0 14px;font-size:14px}
+  .back{background:none;border:none;color:var(--ink-soft);font:inherit;font-size:14px;
+    padding:0;cursor:pointer;margin:0 0 14px}
+  .skel{color:var(--mute);padding:40px 0;text-align:center}
+
+  /* scoring guide: five bands, values above, meaning below */
+  .guide{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--rule);
+    border-radius:9px;overflow:hidden;background:var(--card);margin:0 0 18px}
+  .guide div{padding:9px 4px;text-align:center;border-right:1px solid var(--rule)}
+  .guide div:last-child{border-right:none}
+  .guide b{display:block;font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;
+    letter-spacing:.02em}
+  .guide span{display:block;font-size:10.5px;line-height:1.25;color:var(--mute);margin-top:3px}
+  .guide div:nth-child(1) b{color:#8C6A6A}
+  .guide div:nth-child(5) b{color:var(--mark)}
+
+  /* a real break between the three ballot sections */
+  .band{margin:34px 0 12px;padding-top:22px;border-top:2px solid var(--ink)}
+  .band:first-of-type{margin-top:22px}
+  .band h2{margin:0}
+  .band p{margin:2px 0 0;font-size:13px;color:var(--mute)}
+
+  .group{margin:26px 0 10px}
+  .group h3{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:18px;margin:0}
+
+  .showinfo{background:var(--card);border:1px solid var(--rule);border-radius:9px;
+    padding:13px 15px;margin:0 0 16px;font-size:14px}
+  .showinfo table{border-collapse:collapse;width:100%}
+  .showinfo td{padding:3px 0;vertical-align:top}
+  .showinfo td:first-child{color:var(--mute);padding-right:14px;white-space:nowrap;width:1%}
+
+  .contact{margin:26px 0 0;padding:14px;background:var(--card);border:1px solid var(--rule);
+    border-radius:9px;font-size:14px;color:var(--ink-soft);text-align:center}
+  .contact a{color:var(--ink)}
+
+  /* The action bar is fixed, so it must never wrap onto two lines or it
+     covers the last nominee. Below 360px the counter goes and the buttons
+     keep their full tap area. */
+  @media (max-width:400px){
+    .wrap{padding:16px 12px 110px}
+    .guide div{padding:7px 2px}
+    .guide b{font-size:13px}
+    .guide span{font-size:9px}
+    h1{font-size:26px}
+    .bar{padding:10px 12px;gap:6px}
+    .bar .count{font-size:12px}
+    .btn{padding:12px 14px;font-size:15px}
+    .scale{gap:5px}
+    .scale button{padding:12px 0;font-size:15px}
+    .alt button{font-size:12px;padding:11px 4px}
+  }
+  @media (max-width:340px){
+    .bar .count{display:none}
+    .bar .btn{flex:1}
+  }
+  .pingate{max-width:280px;margin:60px auto 0;text-align:center}
+  .pingate input{text-align:center;letter-spacing:.3em;font-size:22px;font-variant-numeric:tabular-nums}
+  .locked{background:var(--off-bg);border:1px solid var(--rule);color:var(--ink-soft);
+    border-radius:8px;padding:12px;margin:0 0 14px;font-size:14px}
+  .locked a{color:var(--ink)}
+  .roscore{display:inline-block;min-width:34px;padding:4px 8px;border-radius:6px;
+    background:var(--mark-bg);color:var(--mark);font-weight:500;text-align:center;
+    font-variant-numeric:tabular-nums}
+  .roscore.off{background:var(--off-bg);color:var(--off);font-size:12px;font-weight:400}
+  .ronom{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:12px 0;border-bottom:1px solid var(--rule)}
+  .ronom:last-child{border-bottom:none}
 </style>
 </head>
 <body>
-<div class="box" id="box">
-  <h1>Opening your ballots…</h1>
-  <p>One moment.</p>
-</div>
+<div class="wrap" id="app"><div class="skel">Loading your ballots…</div></div>
 
 <script>
-// Forwards to the Apps Script ballot app, carrying the judge's token through.
-//
-// This page exists because some mail apps rewrite a script.google.com link on
-// click and it fails with a Drive error. A link on this domain is not rewritten,
-// and the browser arrives at Apps Script as a normal navigation.
-//
-// Only the token is passed on. Nothing is stored, logged or sent anywhere else.
-var TARGET = 'https://script.google.com/macros/s/AKfycbxoHvIubv6MMjFyeKDvljiECVfcWmdO63CE8EgI8COYU14Rq_5F770B2XPjdOgubN8dYA/exec';
-(function () {
-  var params = new URLSearchParams(window.location.search);
-  var token = (params.get('t') || '').trim();
-  var box = document.getElementById('box');
+var TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
+var PIN = '';
+var CTX = null, BALLOT = null, ANS = {}, DIRTY = false, SAVING = false;
+var app = document.getElementById('app');
 
-  if (!TARGET || TARGET.indexOf('PUT_YOUR') === 0) {
-    box.innerHTML = '<h1 class="err">Not configured</h1>' +
-      '<p>Set TARGET in this page to the ballot app /exec URL.</p>';
-    return;
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+// PIN travels with every call after the gate - the server checks it on each
+// request, not just once, so it only holds for this page visit.
+// The API base. A cross-origin fetch sends no Google cookies, so the
+// multi-account URL rewrite that breaks direct navigation cannot happen here.
+var API = 'https://script.google.com/macros/s/AKfycbxoHvIubv6MMjFyeKDvljiECVfcWmdO63CE8EgI8COYU14Rq_5F770B2XPjdOgubN8dYA/exec';
+
+// text/plain skips the CORS preflight, which Apps Script cannot answer.
+function call(fn,args){
+  return fetch(API,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({fn:fn,args:args||[]}),
+    redirect:'follow',
+    cache:'no-store'
+  }).then(function(r){
+    if(!r.ok) throw new Error('http '+r.status);
+    return r.json();
+  });
+}
+
+// If the API can't be reached at all (odd network, corporate filter), the
+// judge still has a working path: the direct link they were emailed.
+function apiDead(){
+  dead('Couldn\'t reach the ballot server. Try again in a minute, or open '+
+    'your ballot directly: <br><br><a href="'+API+'?t='+encodeURIComponent(TOKEN)+
+    '">'+API.replace('https://','')+'?t=\u2026</a>');
+}
+
+function boot(){
+  if(!TOKEN) return dead('This ballot link isn\'t valid. Ask ATAC for a new one.');
+  pinGate();
+}
+
+function pinGate(err){
+  app.innerHTML=
+    '<div class="pingate"><p class="eyebrow">ATAC judging</p><h1>Your judge number</h1>'+
+    '<p class="meta">ATAC sent this with your ballot link.</p>'+
+    (err?'<p class="note" style="color:var(--bad)">'+esc(err)+'</p>':'')+
+    '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pn" autofocus>'+
+    '<div style="margin-top:14px"><button class="btn" id="go">Continue</button></div></div>';
+  var go=function(){
+    var v=document.getElementById('pn').value.trim();
+    if(!v){return;}
+    var b=document.getElementById('go');b.disabled=true;b.textContent='Checking…';
+    call('api_getContext',[TOKEN,v]).catch(function(){apiDead();throw 0;}).then(function(c){
+      if(c.error==='locked_out'){PIN='';return dead('Too many incorrect attempts. Wait 15 minutes and try again, or contact ATAC.');}
+      if(c.error==='invalid_pin'){PIN='';return pinGate('That number doesn\'t match. Try again.');}
+      if(c.error){return dead('This ballot link isn\'t valid. Ask ATAC for a new one.');}
+      PIN=v;CTX=c;
+      if(c.needs_name) return askName();
+      dashboard();
+    }).catch(function(){b.disabled=false;b.textContent='Continue';});
+  };
+  document.getElementById('go').onclick=go;
+  document.getElementById('pn').addEventListener('keydown',function(e){if(e.key==='Enter')go();});
+}
+
+function dead(msg){app.innerHTML='<div class="err">'+esc(msg)+'</div>';}
+
+function askName(){
+  app.innerHTML=
+    '<p class="eyebrow">First time here</p>'+
+    '<h1>What\'s your name?</h1>'+
+    '<p class="meta">This appears on the ballots you submit, so ATAC knows whose scores are whose.</p>'+
+    '<div class="card"><label for="nm">Full name</label>'+
+    '<input type="text" id="nm" autocomplete="name" placeholder="Jane Doe">'+
+    '<p class="note" id="nmerr"></p></div>'+
+    '<button class="btn" id="go">Save and continue</button>';
+  document.getElementById('go').onclick=function(){
+    var v=document.getElementById('nm').value;
+    if(!v.trim()){document.getElementById('nmerr').textContent='Enter your name to continue.';return;}
+    this.disabled=true;this.textContent='Saving…';
+    var b=this;
+    call('api_setName',[TOKEN,PIN,v]).then(function(r){
+      if(r.error){document.getElementById('nmerr').textContent=r.error;b.disabled=false;b.textContent='Save and continue';return;}
+      CTX.name=r.name;CTX.needs_name=false;dashboard();
+    });
+  };
+}
+
+function dashboard(){
+  var ps=CTX.productions;
+  var html='<p class="eyebrow">ATAC judging '+esc(CTX.name)+'</p><h1>Your ballots</h1>';
+  if(!ps.length){
+    html+='<p class="meta">No shows are open for judging yet. This page will fill up as '+
+      'productions open \u2014 keep the link handy.</p>'+contactBlock();
+    app.innerHTML=html;return;
   }
-  if (!token) {
-    box.innerHTML = '<h1 class="err">Link incomplete</h1>' +
-      '<p>This address is missing the part that identifies you. ' +
-      'Use the full link from your ATAC email, or contact ATAC for a new one.</p>';
-    return;
+
+  var act=ps.filter(function(p){return p.bucket==='active';});
+  var sub=ps.filter(function(p){return p.bucket==='submitted';});
+  var clo=ps.filter(function(p){return p.bucket==='closed';});
+
+  html+='<p class="meta">'+(act.length?act.length+' still to score':'All caught up')+
+    ' \u00b7 '+sub.length+' submitted</p>';
+
+  html+=bucket('Active','Open for judging \u2014 not started or in progress',act,true);
+  html+=bucket('Submitted','Received and final',sub,true);
+  html+=bucket('Closed','Judging has closed and no ballot was submitted',clo,false);
+  html+=contactBlock();
+  app.innerHTML=html;
+}
+
+function bucket(title,sub,list,clickable){
+  if(!list.length) return '';
+  var h='<div class="band"><h2>'+esc(title)+'</h2><p>'+esc(sub)+'</p></div><div class="card">';
+  list.forEach(function(p){
+    var lbl=p.bucket==='submitted'?'Submitted'
+      :(p.state==='draft'?'In progress':(p.bucket==='closed'?'Not submitted':'Not started'));
+    var cls=p.bucket==='submitted'?'submitted':(p.state==='draft'?'draft':'none');
+    h+='<div class="row"'+(clickable?' onclick="openBallot(\''+p.production_id+'\')"':
+      ' style="cursor:default"')+'>'+
+      '<div><div class="t">'+esc(p.title)+'</div>'+
+      '<div class="s">'+esc(p.theater)+(p.run_dates?' \u00b7 '+esc(p.run_dates):'')+'</div></div>'+
+      '<span class="pill '+cls+'">'+lbl+'</span></div>';
+  });
+  return h+'</div>';
+}
+
+function contactBlock(){
+  return '<div class="contact">Questions? Email '+esc(CTX.contact_name)+
+    ' at <a href="mailto:'+esc(CTX.contact_email)+'">'+esc(CTX.contact_email)+'</a></div>';
+}
+
+function openBallot(pid){
+  app.innerHTML='<div class="skel">Loading ballot…</div>';
+  call('api_getBallot',[TOKEN,PIN,pid]).then(function(b){
+    if(b.error==='closed') return dead('This ballot is closed. Contact ATAC if you still need to submit.');
+    if(b.error) return dead('That ballot could not be opened.');
+    BALLOT=b;ANS={};DIRTY=false;
+    if(b.existing&&b.existing.entries) ANS=b.existing.entries;
+    renderBallot();
+  });
+}
+
+function showInfo(p){
+  var rows=[['Category',p.genre_label],['Run dates',p.run_dates],
+            ['Performance times',p.performance_times],['Box office',p.box_office],
+            ['ATAC discount / code',p.discount_code],['Additional info',p.notes]]
+    .filter(function(r){return r[1]&&String(r[1]).trim();});
+  if(!rows.length) return '';
+  return '<div class="showinfo"><table>'+rows.map(function(r){
+    return '<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1])+'</td></tr>';}).join('')+'</table></div>';
+}
+
+function scoringGuide(){
+  var b=[['1 - 2','Poor'],['3 - 4','Below Average'],['5 - 6','Average'],
+         ['7 - 8','Above Average'],['9 - 10','Excellent']];
+  return '<div class="guide">'+b.map(function(x){
+    return '<div><b>'+esc(x[0])+'</b><span>'+esc(x[1])+'</span></div>';}).join('')+'</div>';
+}
+
+function total(){var n=0;BALLOT.sections.forEach(function(s){n+=s.nominees.length;});return n;}
+function done(){var n=0;BALLOT.sections.forEach(function(s){s.nominees.forEach(function(x){
+  if(ANS[x.nominee_id]&&ANS[x.nominee_id].state) n++;});});return n;}
+
+function renderSubmittedBallot(){
+  var p=BALLOT.production,ex=BALLOT.existing||{entries:{}};
+  var html='<button class="back" onclick="leave()">&larr; All ballots</button>'+
+    '<p class="eyebrow">'+esc(p.theater)+(p.genre?' · '+esc(p.genre):'')+'</p>'+
+    '<h1>'+esc(p.title)+'</h1>'+
+    '<p class="meta">'+esc(p.run_dates||'')+(ex.performance_date?' · attended '+esc(ex.performance_date):'')+'</p>'+
+    '<div class="locked">Submitted. Ballots can\'t be changed once sent — '+
+    'email <a href="mailto:'+esc(BALLOT.contact_email)+'">'+esc(BALLOT.contact_email)+
+    '</a> if something needs correcting.</div>';
+
+  var lastGroup=null;
+  BALLOT.sections.forEach(function(s){
+    if(s.group!==lastGroup){
+      html+='<div class="band"><h2>'+esc(s.group)+'</h2></div>';
+      lastGroup=s.group;
+    }
+    if(s.label!==s.group) html+='<div class="group"><h3>'+esc(s.label)+'</h3></div>';
+    html+='<div class="card">';
+    s.nominees.forEach(function(n){
+      var a=ex.entries[n.nominee_id]||{};
+      var tag;
+      if(a.state==='scored') tag='<span class="roscore">'+esc(a.score)+'</span>';
+      else if(a.state==='not_judged') tag='<span class="roscore off">Didn\'t judge</span>';
+      else if(a.state==='recused') tag='<span class="roscore off">Recused</span>';
+      else tag='<span class="roscore off">—</span>';
+      html+='<div class="ronom"><span>'+esc(n.name)+'</span>'+tag+'</div>';
+    });
+    html+='</div>';
+  });
+
+  if(ex.global_note) html+='<div class="card"><label>Your note</label><p style="margin:0">'+esc(ex.global_note)+'</p></div>';
+  app.innerHTML=html;window.scrollTo(0,0);
+}
+
+function renderBallot(){
+  if(BALLOT.submitted) return renderSubmittedBallot();
+
+  var p=BALLOT.production,ex=BALLOT.existing||{};
+  var html='<button class="back" onclick="leave()">&larr; All ballots</button>';
+  html+='<p class="eyebrow">'+esc(p.theater)+(p.genre?' · '+esc(p.genre):'')+'</p>'+
+    '<h1>'+esc(p.title)+'</h1>'+
+    showInfo(p)+
+    '<div class="card"><label for="pd">Which performance did you attend?</label>'+
+    '<input type="date" id="pd" value="'+esc(ex.performance_date||'')+'" onchange="DIRTY=true"></div>'+
+    scoringGuide()+
+    '<div id="problems"></div>';
+
+  var lastGroup=null;
+  BALLOT.sections.forEach(function(s){
+    if(s.group!==lastGroup){
+      html+='<div class="band"><h2>'+esc(s.group)+'</h2></div>';
+      lastGroup=s.group;
+    }
+    if(s.label!==s.group) html+='<div class="group"><h3>'+esc(s.label)+'</h3></div>';
+    html+='<div class="card">';
+    s.nominees.forEach(function(n){html+=nomHtml(n,s);});
+    html+='</div>';
+  });
+
+  html+='<div class="card"><label for="gn">Anything ATAC should know about this ballot? (optional)</label>'+
+    '<textarea id="gn" onchange="DIRTY=true">'+esc(ex.global_note||'')+'</textarea></div>';
+
+  html+='<div class="bar"><span class="count" id="cnt"></span>'+
+    '<button class="btn ghost" id="sv" onclick="saveDraft()">Save for later</button>'+
+    '<button class="btn" id="sb" onclick="submitBallot()">Submit</button></div>';
+
+  app.innerHTML=html;window.scrollTo(0,0);updateCount();
+}
+
+function nomHtml(n,s){
+  var a=ANS[n.nominee_id]||{};
+  var h='<div class="nom" id="n_'+n.nominee_id+'"><div class="who">'+esc(n.name)+'</div><div class="scale">';
+  for(var i=BALLOT.scale.min;i<=BALLOT.scale.max;i++){
+    var on=(a.state==='scored'&&Number(a.score)===i);
+    h+='<button type="button" aria-pressed="'+on+'" aria-label="Score '+i+' for '+esc(n.name)+
+       '" onclick="setScore(\''+n.nominee_id+'\','+i+')">'+i+'</button>';
   }
+  h+='</div><div class="alt">';
+  if(s.allow_not_judged)
+    h+='<button type="button" class="nj" aria-pressed="'+(a.state==='not_judged')+
+       '" onclick="setState(\''+n.nominee_id+'\',\'not_judged\')">Didn\'t judge</button>';
+  h+='<button type="button" class="rc" aria-pressed="'+(a.state==='recused')+
+     '" onclick="setState(\''+n.nominee_id+'\',\'recused\')">Recuse myself</button></div>';
+  h+='<div class="reason" id="r_'+n.nominee_id+'">'+reasonHtml(n.nominee_id)+'</div></div>';
+  return h;
+}
 
-  var dest = TARGET + (TARGET.indexOf('?') === -1 ? '?' : '&') +
-             't=' + encodeURIComponent(token);
+function reasonHtml(id){
+  var a=ANS[id]||{};
+  if(a.state!=='recused'&&a.state!=='not_judged') return '';
+  var req=a.state==='recused';
+  return '<label for="rz_'+id+'">'+(req?'Why are you recusing yourself? (required)':'Why not? (optional)')+'</label>'+
+    '<input type="text" id="rz_'+id+'" value="'+esc(a.reason||'')+
+    '" oninput="setReason(\''+id+'\',this.value)">';
+}
 
-  // replace(), not assign(), so Back does not bounce the judge in a loop
-  window.location.replace(dest);
+function setScore(id,v){ANS[id]={state:'scored',score:v,reason:''};DIRTY=true;refresh(id);}
+function setState(id,st){
+  var a=ANS[id]||{};
+  if(a.state===st){delete ANS[id];}
+  else{ANS[id]={state:st,score:null,reason:a.reason||''};}
+  DIRTY=true;refresh(id);
+}
+function setReason(id,v){if(ANS[id]){ANS[id].reason=v;DIRTY=true;}}
 
-  // If the redirect is blocked, give them something to tap rather than a
-  // blank screen.
-  setTimeout(function () {
-    box.innerHTML = '<h1>Tap to continue</h1>' +
-      '<p>If nothing happened automatically:</p>' +
-      '<a class="btn" href="' + dest + '">Open my ballots</a>' +
-      '<code>' + dest + '</code>';
-  }, 2500);
-})();
+function refresh(id){
+  var sec=null,nom=null;
+  BALLOT.sections.forEach(function(s){s.nominees.forEach(function(n){
+    if(n.nominee_id===id){sec=s;nom=n;}});});
+  var el=document.getElementById('n_'+id);
+  if(el&&sec) el.outerHTML=nomHtml(nom,sec);
+  updateCount();
+}
+
+function updateCount(){
+  var c=document.getElementById('cnt');
+  if(c) c.textContent=done()+' of '+total()+' answered';
+}
+
+function payload(){
+  var pd=document.getElementById('pd'),gn=document.getElementById('gn');
+  return {performance_date:pd?pd.value:'',global_note:gn?gn.value:'',entries:ANS};
+}
+
+function saveDraft(){
+  if(SAVING) return;
+  SAVING=true;
+  var b=document.getElementById('sv');b.disabled=true;b.textContent='Saving…';
+  call('api_saveDraft',[TOKEN,PIN,BALLOT.production.production_id,payload()]).then(function(){
+    SAVING=false;DIRTY=false;b.disabled=false;b.textContent='Saved';
+    setTimeout(function(){b.textContent='Save for later';},1800);
+  }).catch(function(){
+    SAVING=false;b.disabled=false;b.textContent='Save for later';
+    showProblems(['Your ballot could not be saved. Check your connection and try again.']);
+  });
+}
+
+function submitBallot(){
+  if(SAVING) return;
+  SAVING=true;
+  var b=document.getElementById('sb');b.disabled=true;b.textContent='Submitting…';
+  call('api_submitBallot',[TOKEN,PIN,BALLOT.production.production_id,payload()]).then(function(r){
+    SAVING=false;b.disabled=false;b.textContent='Submit';
+    if(r&&r.error==='incomplete'){showProblems(r.problems);return;}
+    if(r&&r.error==='already_submitted'){BALLOT.submitted=true;renderBallot();return;}
+    if(r&&r.error){showProblems(['That could not be submitted. Contact ATAC if it keeps happening.']);return;}
+    DIRTY=false;confirmed(r);
+  }).catch(function(){
+    SAVING=false;b.disabled=false;b.textContent='Submit';
+    showProblems(['Your ballot could not be submitted. Nothing was lost — try again.']);
+  });
+}
+
+function showProblems(list){
+  var d=document.getElementById('problems');
+  d.innerHTML='<div class="err"><strong>Not submitted yet.</strong><ul><li>'+
+    list.map(esc).join('</li><li>')+'</li></ul></div>';
+  d.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function confirmed(r){
+  app.innerHTML='<p class="eyebrow">ATAC judging</p><h1>Ballot submitted</h1>'+
+    '<p class="meta">'+esc(BALLOT.production.title)+' · '+r.count+' entries recorded.</p>'+
+    '<div class="ok">This ballot is now final \u2014 a confirmation listing everything '+
+    'you submitted is on its way to your inbox. To change anything, email '+
+    esc(BALLOT.contact_email||'ATAC')+'.</div>'+
+    '<button class="btn" onclick="reload()">Back to your ballots</button>';
+  window.scrollTo(0,0);
+}
+
+function leave(){
+  if(DIRTY&&!confirm('You have unsaved changes. Leave without saving?')) return;
+  reload();
+}
+function reload(){
+  app.innerHTML='<div class="skel">Loading…</div>';
+  call('api_getContext',[TOKEN,PIN]).then(function(c){CTX=c;dashboard();})
+    .catch(function(){apiDead();});
+}
+
+window.addEventListener('beforeunload',function(e){if(DIRTY){e.preventDefault();e.returnValue='';}});
+if (TOKEN) {
+  boot();
+} else if (google.script.url && google.script.url.getLocation) {
+  google.script.url.getLocation(function(loc){
+    var p = (loc && loc.parameter) || {};
+    TOKEN = String(p.t || '').trim();
+    boot();
+  });
+} else {
+  boot();
+}
 </script>
 </body>
 </html>

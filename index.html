@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-<base target="_top">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -154,6 +153,7 @@ function call(fn,args){
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'},
     body:JSON.stringify({fn:fn,args:args||[]}),
+    credentials:'omit',
     redirect:'follow',
     cache:'no-store'
   }).then(function(r){
@@ -479,17 +479,7 @@ function reload(){
 }
 
 window.addEventListener('beforeunload',function(e){if(DIRTY){e.preventDefault();e.returnValue='';}});
-if (TOKEN) {
-  boot();
-} else if (google.script.url && google.script.url.getLocation) {
-  google.script.url.getLocation(function(loc){
-    var p = (loc && loc.parameter) || {};
-    TOKEN = String(p.t || '').trim();
-    boot();
-  });
-} else {
-  boot();
-}
+boot();
 </script>
 </body>
 </html>

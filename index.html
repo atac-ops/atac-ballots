@@ -1,12 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ATAC Judging</title>
-<link rel="preconnect" href="https://script.google.com">
-<link rel="preconnect" href="https://script.googleusercontent.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<base target="_top">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#16182B; --ink-soft:#4A4C5E; --mute:#7B7C88;
@@ -89,8 +85,10 @@
   .band h2{margin:0}
   .band p{margin:2px 0 0;font-size:13px;color:var(--mute)}
 
-  .group{margin:26px 0 10px}
-  .group h3{font-family:"Newsreader",Georgia,serif;font-weight:500;font-size:18px;margin:0}
+  .group{margin:24px 0 8px}
+  .group h3{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+    color:var(--ink);margin:0;padding:7px 11px;background:var(--ink);color:var(--card);
+    border-radius:6px;display:inline-block}
 
   .showinfo{background:var(--card);border:1px solid var(--rule);border-radius:9px;
     padding:13px 15px;margin:0 0 16px;font-size:14px}
@@ -136,11 +134,11 @@
   .ronom:last-child{border-bottom:none}
 </style>
 </head>
-<body>
+<body data-token="<?= token ?>">
 <div class="wrap" id="app"><div class="skel">Loading your ballots…</div></div>
 
 <script>
-var TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
+var TOKEN = (document.body.getAttribute('data-token') || '').trim();
 var PIN = '';
 var CTX = null, BALLOT = null, ANS = {}, DIRTY = false, SAVING = false;
 var app = document.getElementById('app');
@@ -148,32 +146,8 @@ var app = document.getElementById('app');
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
 // PIN travels with every call after the gate - the server checks it on each
 // request, not just once, so it only holds for this page visit.
-// The API base. A cross-origin fetch sends no Google cookies, so the
-// multi-account URL rewrite that breaks direct navigation cannot happen here.
-var API = 'https://script.google.com/macros/s/AKfycbxoHvIubv6MMjFyeKDvljiECVfcWmdO63CE8EgI8COYU14Rq_5F770B2XPjdOgubN8dYA/exec';
-
-// text/plain skips the CORS preflight, which Apps Script cannot answer.
-function call(fn,args){
-  return fetch(API,{
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body:JSON.stringify({fn:fn,args:args||[]}),
-    credentials:'omit',
-    redirect:'follow',
-    cache:'no-store'
-  }).then(function(r){
-    if(!r.ok) throw new Error('http '+r.status);
-    return r.json();
-  });
-}
-
-// If the API can't be reached at all (odd network, corporate filter), the
-// judge still has a working path: the direct link they were emailed.
-function apiDead(){
-  dead('Couldn\'t reach the ballot server. Try again in a minute, or open '+
-    'your ballot directly: <br><br><a href="'+API+'?t='+encodeURIComponent(TOKEN)+
-    '">'+API.replace('https://','')+'?t=\u2026</a>');
-}
+function call(fn,args){return new Promise(function(res,rej){
+  google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn].apply(null,args||[]);});}
 
 function boot(){
   if(!TOKEN) return dead('This ballot link isn\'t valid. Ask ATAC for a new one.');
@@ -191,7 +165,7 @@ function pinGate(err){
     var v=document.getElementById('pn').value.trim();
     if(!v){return;}
     var b=document.getElementById('go');b.disabled=true;b.textContent='Checking…';
-    call('api_getContext',[TOKEN,v]).catch(function(){apiDead();throw 0;}).then(function(c){
+    call('api_getContext',[TOKEN,v]).then(function(c){
       if(c.error==='locked_out'){PIN='';return dead('Too many incorrect attempts. Wait 15 minutes and try again, or contact ATAC.');}
       if(c.error==='invalid_pin'){PIN='';return pinGate('That number doesn\'t match. Try again.');}
       if(c.error){return dead('This ballot link isn\'t valid. Ask ATAC for a new one.');}
@@ -362,7 +336,7 @@ function renderBallot(){
     html+='</div>';
   });
 
-  html+='<div class="card"><label for="gn">Anything ATAC should know about this ballot? (optional)</label>'+
+  html+='<div class="card"><label for="gn">Anything ATAC should know about this show? (optional)</label>'+
     '<textarea id="gn" onchange="DIRTY=true">'+esc(ex.global_note||'')+'</textarea></div>';
 
   html+='<div class="bar"><span class="count" id="cnt"></span>'+
@@ -384,8 +358,10 @@ function nomHtml(n,s){
   if(s.allow_not_judged)
     h+='<button type="button" class="nj" aria-pressed="'+(a.state==='not_judged')+
        '" onclick="setState(\''+n.nominee_id+'\',\'not_judged\')">Didn\'t judge</button>';
-  h+='<button type="button" class="rc" aria-pressed="'+(a.state==='recused')+
-     '" onclick="setState(\''+n.nominee_id+'\',\'recused\')">Recuse myself</button></div>';
+  if(s.allow_recuse!==false)
+    h+='<button type="button" class="rc" aria-pressed="'+(a.state==='recused')+
+       '" onclick="setState(\''+n.nominee_id+'\',\'recused\')">Recuse myself</button>';
+  h+='</div>';
   h+='<div class="reason" id="r_'+n.nominee_id+'">'+reasonHtml(n.nominee_id)+'</div></div>';
   return h;
 }
@@ -479,12 +455,21 @@ function leave(){
 }
 function reload(){
   app.innerHTML='<div class="skel">Loading…</div>';
-  call('api_getContext',[TOKEN,PIN]).then(function(c){CTX=c;dashboard();})
-    .catch(function(){apiDead();});
+  call('api_getContext',[TOKEN,PIN]).then(function(c){CTX=c;dashboard();});
 }
 
 window.addEventListener('beforeunload',function(e){if(DIRTY){e.preventDefault();e.returnValue='';}});
-boot();
+if (TOKEN) {
+  boot();
+} else if (google.script.url && google.script.url.getLocation) {
+  google.script.url.getLocation(function(loc){
+    var p = (loc && loc.parameter) || {};
+    TOKEN = String(p.t || '').trim();
+    boot();
+  });
+} else {
+  boot();
+}
 </script>
 </body>
 </html>

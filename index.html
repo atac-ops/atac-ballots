@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ATAC Judging</title>
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -134,11 +138,11 @@
   .ronom:last-child{border-bottom:none}
 </style>
 </head>
-<body data-token="<?= token ?>">
+<body>
 <div class="wrap" id="app"><div class="skel">Loading your ballots…</div></div>
 
 <script>
-var TOKEN = (document.body.getAttribute('data-token') || '').trim();
+var TOKEN = (new URLSearchParams(location.search).get('t') || '').trim();
 var PIN = '';
 var CTX = null, BALLOT = null, ANS = {}, DIRTY = false, SAVING = false;
 var app = document.getElementById('app');
@@ -146,8 +150,29 @@ var app = document.getElementById('app');
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
 // PIN travels with every call after the gate - the server checks it on each
 // request, not just once, so it only holds for this page visit.
-function call(fn,args){return new Promise(function(res,rej){
-  google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn].apply(null,args||[]);});}
+var API = 'https://script.google.com/macros/s/AKfycbxoHvIubv6MMjFyeKDvljiECVfcWmdO63CE8EgI8COYU14Rq_5F770B2XPjdOgubN8dYA/exec';
+
+// Cross-origin fetch with no cookies: nothing for Google's multi-account
+// handler to resolve, so the /macros/u/N/ rewrite cannot happen.
+function call(fn,args){
+  return fetch(API,{
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({fn:fn,args:args||[]}),
+    credentials:'omit',
+    redirect:'follow',
+    cache:'no-store'
+  }).then(function(r){
+    if(!r.ok) throw new Error('http '+r.status);
+    return r.json();
+  });
+}
+
+function apiDead(){
+  dead('Couldn\'t reach the ballot server. Try again in a minute, or open '+
+    'your ballot directly: <br><br><a href="'+API+'?t='+encodeURIComponent(TOKEN)+
+    '">'+API.replace('https://','')+'?t=\u2026</a>');
+}
 
 function boot(){
   if(!TOKEN) return dead('This ballot link isn\'t valid. Ask ATAC for a new one.');
@@ -165,7 +190,7 @@ function pinGate(err){
     var v=document.getElementById('pn').value.trim();
     if(!v){return;}
     var b=document.getElementById('go');b.disabled=true;b.textContent='Checking…';
-    call('api_getContext',[TOKEN,v]).then(function(c){
+    call('api_getContext',[TOKEN,v]).catch(function(){apiDead();throw 0;}).then(function(c){
       if(c.error==='locked_out'){PIN='';return dead('Too many incorrect attempts. Wait 15 minutes and try again, or contact ATAC.');}
       if(c.error==='invalid_pin'){PIN='';return pinGate('That number doesn\'t match. Try again.');}
       if(c.error){return dead('This ballot link isn\'t valid. Ask ATAC for a new one.');}
@@ -175,7 +200,11 @@ function pinGate(err){
     }).catch(function(){b.disabled=false;b.textContent='Continue';});
   };
   document.getElementById('go').onclick=go;
-  document.getElementById('pn').addEventListener('keydown',function(e){if(e.key==='Enter')go();});
+  var pn=document.getElementById('pn');
+  pn.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.keyCode===13||e.which===13){e.preventDefault();go();}
+  });
+  pn.focus();
 }
 
 function dead(msg){app.innerHTML='<div class="err">'+esc(msg)+'</div>';}
@@ -189,16 +218,27 @@ function askName(){
     '<input type="text" id="nm" autocomplete="name" placeholder="Jane Doe">'+
     '<p class="note" id="nmerr"></p></div>'+
     '<button class="btn" id="go">Save and continue</button>';
-  document.getElementById('go').onclick=function(){
+  var saveName=function(){
+    var b=document.getElementById('go');
+    if(b.disabled) return;
     var v=document.getElementById('nm').value;
     if(!v.trim()){document.getElementById('nmerr').textContent='Enter your name to continue.';return;}
-    this.disabled=true;this.textContent='Saving…';
-    var b=this;
+    b.disabled=true;b.textContent='Saving\u2026';
     call('api_setName',[TOKEN,PIN,v]).then(function(r){
-      if(r.error){document.getElementById('nmerr').textContent=r.error;b.disabled=false;b.textContent='Save and continue';return;}
+      if(r.error){document.getElementById('nmerr').textContent=r.error;
+        b.disabled=false;b.textContent='Save and continue';return;}
       CTX.name=r.name;CTX.needs_name=false;dashboard();
+    }).catch(function(){
+      document.getElementById('nmerr').textContent='Could not save. Try again.';
+      b.disabled=false;b.textContent='Save and continue';
     });
   };
+  document.getElementById('go').onclick=saveName;
+  var nm=document.getElementById('nm');
+  nm.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.keyCode===13||e.which===13){e.preventDefault();saveName();}
+  });
+  nm.focus();
 }
 
 function dashboard(){
@@ -372,7 +412,8 @@ function reasonHtml(id){
   var req=a.state==='recused';
   return '<label for="rz_'+id+'">'+(req?'Why are you recusing yourself? (required)':'Why not? (optional)')+'</label>'+
     '<input type="text" id="rz_'+id+'" value="'+esc(a.reason||'')+
-    '" oninput="setReason(\''+id+'\',this.value)">';
+    '" oninput="setReason(\''+id+'\',this.value)"'+
+    ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}">';
 }
 
 function setScore(id,v){ANS[id]={state:'scored',score:v,reason:''};DIRTY=true;refresh(id);}
@@ -455,21 +496,12 @@ function leave(){
 }
 function reload(){
   app.innerHTML='<div class="skel">Loading…</div>';
-  call('api_getContext',[TOKEN,PIN]).then(function(c){CTX=c;dashboard();});
+  call('api_getContext',[TOKEN,PIN]).then(function(c){CTX=c;dashboard();})
+    .catch(function(){apiDead();});
 }
 
 window.addEventListener('beforeunload',function(e){if(DIRTY){e.preventDefault();e.returnValue='';}});
-if (TOKEN) {
-  boot();
-} else if (google.script.url && google.script.url.getLocation) {
-  google.script.url.getLocation(function(loc){
-    var p = (loc && loc.parameter) || {};
-    TOKEN = String(p.t || '').trim();
-    boot();
-  });
-} else {
-  boot();
-}
+boot();
 </script>
 </body>
 </html>

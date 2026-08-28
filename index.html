@@ -152,8 +152,8 @@ function esc(s){var d=document.createElement('div');d.textContent=s==null?'':Str
 // request, not just once, so it only holds for this page visit.
 var API = 'https://script.google.com/macros/s/AKfycbxoHvIubv6MMjFyeKDvljiECVfcWmdO63CE8EgI8COYU14Rq_5F770B2XPjdOgubN8dYA/exec';
 
-// Cross-origin fetch with no cookies: nothing for Google's multi-account
-// handler to resolve, so the /macros/u/N/ rewrite cannot happen.
+// Cross-origin fetch, no cookies. Google's multi-account handler has no session
+// to resolve, so it cannot rewrite the URL to /macros/u/N/... and 404.
 function call(fn,args){
   return fetch(API,{
     method:'POST',
@@ -184,7 +184,7 @@ function pinGate(err){
     '<div class="pingate"><p class="eyebrow">ATAC judging</p><h1>Your judge number</h1>'+
     '<p class="meta">ATAC sent this with your ballot link.</p>'+
     (err?'<p class="note" style="color:var(--bad)">'+esc(err)+'</p>':'')+
-    '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pn" autofocus>'+
+    '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="pn">'+
     '<div style="margin-top:14px"><button class="btn" id="go">Continue</button></div></div>';
   var go=function(){
     var v=document.getElementById('pn').value.trim();
@@ -297,7 +297,8 @@ function openBallot(pid){
 }
 
 function showInfo(p){
-  var rows=[['Category',p.genre_label],['Run dates',p.run_dates],
+  var rows=[['Category',p.genre_label],['Address',p.theater_location],
+            ['Run dates',p.run_dates],
             ['Performance times',p.performance_times],['Box office',p.box_office],
             ['ATAC discount / code',p.discount_code],['Additional info',p.notes]]
     .filter(function(r){return r[1]&&String(r[1]).trim();});
